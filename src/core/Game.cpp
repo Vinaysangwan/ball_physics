@@ -1,4 +1,4 @@
-#include "Game.hpp"
+#include "Game.h"
 
 //*********************************************************************
 //********************** Private Game Functions ***********************
@@ -7,11 +7,9 @@
 // Initializing Variables
 void Game::initVariables()
 {
-    // Window Variables
-    {
-        this->video_mode.size.x = 800; // Width
-        this->video_mode.size.y = 600; // Height
-    }
+    // Init Window Variables
+    this->video_mode.size.x = window_width;  // Width
+    this->video_mode.size.y = window_height; // Height
 
     // Clock
     this->game_clock = new sf::Clock();
@@ -30,7 +28,7 @@ void Game::initWindow()
     this->window->setPosition(sf::Vector2i{this->window->getPosition().x, 50});
 
     // FrameRate
-    this->window->setFramerateLimit(60);
+    // this->window->setFramerateLimit(60);
 }
 
 // Initializing Fonts
@@ -54,11 +52,10 @@ void Game::initText()
     this->text_fps->setString(sf::String("FPS: 60"));
 }
 
-// Initializing Ball
-void Game::initBall()
+// Initializing Balls
+void Game::init_Balls()
 {
-    Ball ball(this->window);
-    this->balls.push_back(ball);
+    balls = new Balls();
 }
 
 // Updating the FPS text
@@ -74,24 +71,6 @@ void Game::updateFpsText()
     this->text_fps->setString(display_string);
 }
 
-void Game::spawnBalls()
-{
-    static bool mouse_clicked = false;
-
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && this->window->hasFocus())
-    {
-        if (!mouse_clicked)
-        {
-            this->initBall();
-        }
-        mouse_clicked = true;
-    }
-    else
-    {
-        mouse_clicked = false;
-    }
-}
-
 //*********************************************************************
 //************************* Main Game Functions ***********************
 //*********************************************************************
@@ -104,12 +83,14 @@ Game::Game()
 
     this->initFont(); // Init Fonts
     this->initText(); // Init Text
+
+    this->init_Balls();
 }
 
 // Destructor
 Game::~Game()
 {
-
+    delete this->balls;
     delete this->text_fps;
     delete this->font_blinky_star;
 
@@ -161,14 +142,11 @@ void Game::update()
     this->delta_time = game_clock->restart().asSeconds();
     this->pollEvent();
 
-    this->spawnBalls();
-
-    for (Ball i : this->balls)
-    {
-        i.updateBall(this->delta_time);
-    }
-
     this->updateFpsText();
+
+    mouse_position = (sf::Vector2f)sf::Mouse::getPosition(*window);
+
+    balls->update(delta_time);
 }
 
 // Render Function
@@ -180,10 +158,7 @@ void Game::render()
     // Draw or Render On the Window
     this->window->draw(*this->text_fps);
 
-    for (Ball i : this->balls)
-    {
-        i.renderBall(this->window);
-    }
+    balls->render(*window);
 
     this->window->display();
 }

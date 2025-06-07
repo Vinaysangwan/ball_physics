@@ -5,24 +5,25 @@ CXXFLAGS = -I./include -std=c++23 -Wall -Wextra
 # Libraries
 LDFLAGS = -L./lib -lsfml-window -lsfml-system -lsfml-graphics
 
-# Object Files
-OBJ = output/main.o output/Game.o output/Ball.o
+# Object 
+DIR_SRC = src
+DIR_OBJ = output
+
+SRC = $(wildcard $(DIR_SRC)/*.cpp $(DIR_SRC)/**/*.cpp)
+OBJ = $(patsubst $(DIR_SRC)/%.cpp, $(DIR_OBJ)/%.o, $(SRC))
 
 # Executable File
 EXE = main.exe
 
 # Target
-all: compile link run
+all: $(EXE) run
 
-# Compile
-compile:
-	$(CXX) $(CXXFLAGS) -c src/main.cpp -o output/main.o
-	$(CXX) $(CXXFLAGS) -c src/core/Game.cpp -o output/Game.o
-	$(CXX) $(CXXFLAGS) -c src/entities/Ball.cpp -o output/Ball.o
+$(DIR_OBJ)/%.o: $(DIR_SRC)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Link
-link:
-	$(CXX) $(OBJ) -o main $(LDFLAGS)
+$(EXE): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $(EXE) $(OBJ) $(LDFLAGS)
 
 # Run (gdb)
 run:

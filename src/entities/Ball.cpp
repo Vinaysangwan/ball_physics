@@ -1,95 +1,89 @@
-#include "Ball.hpp"
+#include "Ball.h"
 
-//***************************************************************************************
-//********************************** Private Functions **********************************
-//***************************************************************************************
-
-void Ball::initVariables()
+void Ball::init_Variables(const sf::Vector2f &position, const sf::Color &color)
 {
-    // Ball Speed
-    this->speed = sf::Vector2(300.0f, 300.0f);
+    // Random
+    random = new Random();
 
-    // Ball Radius
+    // Forces
+    this->gravity = 980.0f;
+    this->friction = gravity * friction_coefficient;
+
+    this->position = position;
+    this->color = color;
     this->radius = 10.0f;
+    this->speed = random->get_RandomFloat(-200.0f, 200.0f);
+    velocity = sf::Vector2f(speed, 0.0f);
 }
 
-void Ball::initBall()
+void Ball::init_Circle()
 {
-    // Init Ball , Radius & Scale & Thichness
-    this->ball = new sf::CircleShape(this->radius);
-    // this->ball->setOutlineThickness(3.0f);
-
-    // Ball Origin & Position
-    this->ball->setOrigin(sf::Vector2f{this->radius, this->radius});             // Origin
-    this->ball->setPosition(sf::Vector2f{this->mouse_pos.x, this->mouse_pos.y}); // Position
-
-    // Ball Fill & Thickness Color
-    this->ball->setFillColor(sf::Color(255, 255, 255));
-    // this->ball->setOutlineColor(sf::Color(0, 0, 0));
+    this->setRadius(radius);
+    this->setPosition(position);
+    this->setOrigin(sf::Vector2f{radius, radius});
+    this->setFillColor(color);
 }
 
-void Ball::moveBall()
+void Ball::move_ball(const float &delta_time)
 {
-    // Ball Collision With Window
-    { // For Right Window
-        if (this->ball->getPosition().x + this->radius >= this->video_mode.size.x)
-        {
-            this->speed.x *= -1;
-            this->ball->setPosition(sf::Vector2f{this->video_mode.size.x - this->radius - 0.1f, this->ball->getPosition().y});
-        }
-        // For Left Window
-        else if (this->ball->getPosition().x - this->radius <= 0.0f)
-        {
-            this->speed.x *= -1;
-            this->ball->setPosition(sf::Vector2f{this->radius + 0.1f, this->ball->getPosition().y});
-        }
+    this->move(velocity * delta_time);
 
-        // For Top Window
-        if (this->ball->getPosition().y + this->radius >= this->video_mode.size.y)
+    window_Collision(delta_time);
+
+    velocity.y += gravity * delta_time;
+}
+
+void Ball::window_Collision(const float &delta_time)
+{
+    // Collision with Bottom Window Border
+    if (this->getPosition().y + radius >= window_height && velocity.y >= 0)
+    {
+        this->setPosition(sf::Vector2f(this->getPosition().x, window_height - radius));
+        velocity.y = -velocity.y * restitution;
+
+        // Firiction
+        if (velocity.x > 0)
         {
-            this->speed.y *= -1;
-            this->ball->setPosition(sf::Vector2f{this->ball->getPosition().x, this->video_mode.size.y - this->radius - 0.1f});
+            velocity.x -= get_Max(0.0f, friction * delta_time);
         }
-        // For the Bottom Window
-        else if (this->ball->getPosition().y - this->radius <= 0.0f)
+        else if (velocity.x < 0)
         {
-            this->speed.y *= -1;
-            this->ball->setPosition(sf::Vector2f{this->ball->getPosition().x, this->radius + 0.1f});
+            velocity.x += get_Min(0.0f, friction * delta_time);
         }
     }
+    // Collision with Top Window Border
+    else if (this->getPosition().y - radius <= 0.0f && velocity.y < 0)
+    {
+        this->setPosition(sf::Vector2f(this->getPosition().x, radius));
+        velocity.y = -velocity.y * restitution;
+    }
 
-    this->ball->move(this->speed * delta_time);
+    // Collision with left Window Border
+    if (this->getPosition().x - radius <= 0.0f && velocity.x < 0)
+    {
+        this->setPosition(sf::Vector2f(radius, this->getPosition().y));
+        velocity.x = -velocity.x * restitution;
+    }
+    // Collision with Right Window Border
+    else if (this->getPosition().x + radius >= window_width && velocity.x >= 0)
+    {
+        this->setPosition(sf::Vector2f(window_width - radius, this->getPosition().y));
+        velocity.x = -velocity.x * restitution;
+    }
 }
 
-//***************************************************************************************
-//********************************** Public Functions ***********************************
-//***************************************************************************************
-
-Ball::Ball(sf::RenderWindow *window)
+Ball::Ball(const sf::Vector2f &position, const sf::Color &color)
+    : restitution(1.0f), friction_coefficient(0.0f)
 {
-    this->video_mode.size = window->getSize();
-
-    this->mouse_pos = sf::Vector2f(static_cast<float>(sf::Mouse::getPosition(*window).x), static_cast<float>(sf::Mouse::getPosition(*window).y));
-
-    std::cout << "Mouse Pos: (" << this->mouse_pos.x << " , " << this->mouse_pos.y << ")" << std::endl;
-
-    this->initVariables(); // Init Variables
-    this->initBall();      // Init ball
+    init_Variables(position, color);
+    init_Circle();
 }
 
 Ball::~Ball()
 {
-    delete this->ball;
 }
 
-void Ball::updateBall(float delta_time)
+void Ball::update(const float &delta_time)
 {
-    this->delta_time = delta_time;
-
-    this->moveBall();
-}
-
-void Ball::renderBall(sf::RenderWindow *window)
-{
-    window->draw(*this->ball);
+    move_ball(delta_time);
 }

@@ -1,11 +1,7 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <iostream>
-
-#include "../common.hpp"
-#include "../entities/Ball.hpp"
+#include "../common.h"
+#include "../entities/Balls.h"
 
 class Game
 {
@@ -16,13 +12,10 @@ private:
     void initWindow();    // Window
     void initFont();      // Fonts
     void initText();      // text
-    void initBall();      // Ball
+    void init_Balls();    // Balls
 
     // Update Functions
     void updateFpsText(); // Fps Update
-
-    // Spawn Balls
-    void spawnBalls();
 
 public:
     // Public Functions
@@ -54,6 +47,6 @@ private:
     // Text
     sf::Text *text_fps;
 
-    // Ball
-    std::vector<Ball> balls;
+    // Balls
+    Balls *balls;
 };
