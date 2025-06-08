@@ -28,7 +28,7 @@ void Game::initWindow()
     this->window->setPosition(sf::Vector2i{this->window->getPosition().x, 50});
 
     // FrameRate
-    // this->window->setFramerateLimit(60);
+    this->window->setFramerateLimit(60);
 }
 
 // Initializing Fonts

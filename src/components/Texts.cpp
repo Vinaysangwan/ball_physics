@@ -46,3 +46,11 @@ Texts::~Texts()
 // #########################################################################
 //                           Public Functions
 // #########################################################################
+
+// Stream Text (Text + Int)
+void Texts::stream_StringInt(const std::string &text, const int &num)
+{
+    std::stringstream ss;
+    ss << text << num;
+    this->setString(ss.str());
+}

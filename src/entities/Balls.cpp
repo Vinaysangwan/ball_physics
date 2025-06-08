@@ -1,5 +1,12 @@
 #include "Balls.h"
 
+#include <cmath>
+
+// ###########################################################################
+//                            Private Functions
+// ###########################################################################
+
+// Init Vairables
 void Balls::init_Variables()
 {
     // Random
@@ -7,28 +14,47 @@ void Balls::init_Variables()
 
     // Ball Count
     ball_count = 0;
+
+    // Ball Count Text
+    ball_count_text = new Texts("Balls: 0", sf::Vector2f(window_width / 2.0f, 50.0f));
+
+    // Cell Size
+    cell_size = 20.0f;
 }
 
+// Spawn Ball
 void Balls::spawn_Ball()
 {
-    static bool mouse_clicked = false;
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+    // Spawn Once when Mouse Left Click is Pressed
     {
-        if (!mouse_clicked)
+        static bool mouse_clicked = false;
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
         {
-            Ball ball(mouse_position, sf::Color(random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), 255));
-            balls.push_back(std::make_unique<Ball>(ball));
-            ball_count++;
-
-            mouse_clicked = true;
+            if (!mouse_clicked)
+            {
+                balls.push_back(std::make_unique<Ball>(mouse_position, sf::Color(random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), 255)));
+                ball_count++;
+                mouse_clicked = true;
+            }
+        }
+        else
+        {
+            mouse_clicked = false;
         }
     }
-    else
+
+    // Spawn Multiple times when Right click is Pressed
     {
-        mouse_clicked = false;
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right))
+        {
+
+            balls.push_back(std::make_unique<Ball>(mouse_position, sf::Color(random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), random->get_RandomInt(0, 255), 255)));
+            ball_count++;
+        }
     }
 }
 
+// Despawn Balls
 void Balls::despawn_Balls()
 {
     // Despawn all the Balls (C)
@@ -70,69 +96,136 @@ void Balls::despawn_Balls()
     }
 }
 
-void Balls::handle_Collision()
+// Find Neighbour
+void Balls::find_neighbour()
 {
-    for (int i = 0; i < ball_count - 1; i++)
+    std::unordered_map<std::pair<int, int>, std::vector<Ball *>, PairHash> grid;
+
+    // Adding Balls inside grid
+    for (const auto &i : balls)
     {
-        for (int j = i + 1; j < ball_count; j++)
+        grid[{static_cast<int>(i->getPosition().x / cell_size), static_cast<int>(i->getPosition().y / cell_size)}].push_back(i.get());
+    }
+
+    // Collsion for each ball
+    for (const auto &ball_ptr : balls)
+    {
+        Ball *A = ball_ptr.get();
+
+        int cell_y = static_cast<int>(A->getPosition().y / cell_size);
+        int cell_x = static_cast<int>(A->getPosition().x / cell_size);
+
+        // Check for 9 neighbours
+        for (int i = -1; i <= 1; i++)
         {
-            Ball *A = balls[i].get();
-            Ball *B = balls[j].get();
-
-            sf::Vector2f displacement = A->getPosition() - B->getPosition();
-            float distance_squared = displacement.x * displacement.x + displacement.y * displacement.y;
-            float min_distance = A->radius + B->radius;
-
-            // If Colliding
-            if (distance_squared < min_distance * min_distance)
+            for (int j = -1; j <= 1; j++)
             {
-                float distance = std::sqrt(distance_squared);
-                float inv_distance = (distance_squared != 0) ? 1.0f / distance : 1.0f;
-                sf::Vector2f normal = displacement * inv_distance;
+                const auto it = grid.find({cell_x + j, cell_y + i});
 
-                // Set there position
-                float overlap = (min_distance - distance) * 0.5f;
-                sf::Vector2f overlap_direction = normal * overlap;
-
-                A->setPosition(A->getPosition() + overlap_direction);
-                B->setPosition(B->getPosition() - overlap_direction);
-
-                sf::Vector2f rel_velocity = A->velocity - B->velocity;
-                float rel_velocity_along_normal = normal.x * rel_velocity.x + normal.y * rel_velocity.y;
-
-                // If moving in same direction
-                if (rel_velocity_along_normal > 0.0f)
+                // No neighbour is found
+                if (it == grid.end())
                 {
                     continue;
                 }
 
-                float restitution = get_Min(A->restitution, B->restitution);
-                float vel = -(1 + restitution) * rel_velocity_along_normal;
-                vel /= 2.0f; // Both have same mass
-                sf::Vector2f vel_along_normal = normal * vel;
+                // Neighbours are Found
+                const std::vector<Ball *> &neighbours = it->second;
+                for (const auto &neighbour : neighbours)
+                {
+                    Ball *B = neighbour;
 
-                A->velocity += vel_along_normal;
-                B->velocity -= vel_along_normal;
+                    // Same Ball is Found
+                    if (A >= B)
+                    {
+                        continue;
+                    }
+
+                    handle_Collision(A, B);
+                }
             }
         }
     }
 }
 
+// Handle Collision Between 2 Balls (A & B)
+void Balls::handle_Collision(Ball *A, Ball *B)
+{
+    sf::Vector2f displacement = A->getPosition() - B->getPosition();
+    float square_distance = (displacement.x * displacement.x + displacement.y * displacement.y);
+    float min_distance = A->radius + B->radius;
+
+    // A and B are Colliding
+    if (square_distance <= min_distance * min_distance)
+    {
+        sf::Vector2f normal;
+        float distance;
+
+        // If overlapping
+        if (square_distance == 0.0f)
+        {
+            float angle = random->get_RandomFloat(0, 2.0f * 3.1415926f);
+            normal = sf::Vector2f{std::cos(angle), std::sin(angle)};
+            distance = 0.0f;
+        }
+        else
+        {
+            distance = std::sqrt(square_distance);
+            normal = displacement / distance;
+        }
+
+        // Set A and b Position
+        float overlap = (min_distance - distance) * 0.5f; // For Each
+        sf::Vector2f correction = normal * overlap;
+        A->setPosition(A->getPosition() + correction);
+        B->setPosition(B->getPosition() - correction);
+
+        // Checking there velocity direction
+        sf::Vector2f rel_velocity = A->velocity - B->velocity;
+        float rel_velocity_along_normal = rel_velocity.x * normal.x + rel_velocity.y * normal.y;
+
+        // If moving in same Direction and velocity of A > B
+        if (rel_velocity_along_normal > 0.0f)
+        {
+            return;
+        }
+
+        float restitution = get_Min(A->restitution, B->restitution);
+        float velocity_after_collision = -(1 + restitution) * rel_velocity_along_normal;
+        sf::Vector2f velocity_along_normal = normal * velocity_after_collision;
+        velocity_along_normal /= 2.0f; // Since mass of A = mass of B
+
+        // Set the velocity of both A & B
+        A->velocity += velocity_along_normal;
+        B->velocity -= velocity_along_normal;
+    }
+}
+
+// ###########################################################################
+//                         Constructor & Destructor
+// ###########################################################################
+
+// Constructor
 Balls::Balls()
 {
     init_Variables();
 }
 
+// Destructor
 Balls::~Balls()
 {
     delete random;
 }
 
+// ###########################################################################
+//                            Main Functions
+// ###########################################################################
+
+// Update Function
 void Balls::update(const float &delta_time)
 {
     spawn_Ball();
 
-    // Update Balls
+    // Update Balls + handle Collision between them
     if (ball_count > 0)
     {
         for (const auto &i : balls)
@@ -140,12 +233,16 @@ void Balls::update(const float &delta_time)
             i->update(delta_time);
         }
 
-        handle_Collision();
+        find_neighbour();
     }
+
+    // Update or Stream Ball Count Text
+    ball_count_text->stream_StringInt("Balls: ", ball_count);
 
     despawn_Balls();
 }
 
+// Render Function
 void Balls::render(sf::RenderTarget &window)
 {
     // Render Balls
@@ -156,4 +253,6 @@ void Balls::render(sf::RenderTarget &window)
             window.draw(*i);
         }
     }
+
+    window.draw(*ball_count_text);
 }

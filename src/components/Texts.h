@@ -10,12 +10,11 @@ private: // Private Functions
 
 public: // Public Functions
     // Constructor & Destructor
-    Texts(const std::string &text, const sf::Vector2f &text_pos, const std::string &font_address = "assets/fonts/Roboto-Regular.ttf", const int font_size = 20);
+    Texts(const std::string &text, const sf::Vector2f &text_pos, const std::string &font_address = "font/Blinky_Star.otf", const int font_size = 20);
     ~Texts();
 
     // Main Texts Functions
-
-    // Return Functions
+    void stream_StringInt(const std::string &text, const int &num);
 
 private: // Private Members
     Fonts *font;
