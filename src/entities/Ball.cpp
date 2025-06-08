@@ -73,7 +73,7 @@ void Ball::window_Collision(const float &delta_time)
 }
 
 Ball::Ball(const sf::Vector2f &position, const sf::Color &color)
-    : restitution(1.0f), friction_coefficient(0.0f)
+    : friction_coefficient(0.4f), restitution(0.85f)
 {
     init_Variables(position, color);
     init_Circle();

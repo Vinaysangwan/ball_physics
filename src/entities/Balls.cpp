@@ -39,6 +39,7 @@ void Balls::despawn_Balls()
             if (!is_c_pressed)
             {
                 balls.clear();
+                ball_count = 0;
 
                 is_c_pressed = true;
             }
@@ -57,6 +58,7 @@ void Balls::despawn_Balls()
             if (!is_z_pressed)
             {
                 balls.pop_back();
+                ball_count--;
 
                 is_z_pressed = true;
             }
@@ -68,12 +70,50 @@ void Balls::despawn_Balls()
     }
 }
 
-void Balls::handle_Collision(const float &delta_time)
+void Balls::handle_Collision()
 {
     for (int i = 0; i < ball_count - 1; i++)
     {
         for (int j = i + 1; j < ball_count; j++)
         {
+            Ball *A = balls[i].get();
+            Ball *B = balls[j].get();
+
+            sf::Vector2f displacement = A->getPosition() - B->getPosition();
+            float distance_squared = displacement.x * displacement.x + displacement.y * displacement.y;
+            float min_distance = A->radius + B->radius;
+
+            // If Colliding
+            if (distance_squared < min_distance * min_distance)
+            {
+                float distance = std::sqrt(distance_squared);
+                float inv_distance = (distance_squared != 0) ? 1.0f / distance : 1.0f;
+                sf::Vector2f normal = displacement * inv_distance;
+
+                // Set there position
+                float overlap = (min_distance - distance) * 0.5f;
+                sf::Vector2f overlap_direction = normal * overlap;
+
+                A->setPosition(A->getPosition() + overlap_direction);
+                B->setPosition(B->getPosition() - overlap_direction);
+
+                sf::Vector2f rel_velocity = A->velocity - B->velocity;
+                float rel_velocity_along_normal = normal.x * rel_velocity.x + normal.y * rel_velocity.y;
+
+                // If moving in same direction
+                if (rel_velocity_along_normal > 0.0f)
+                {
+                    continue;
+                }
+
+                float restitution = get_Min(A->restitution, B->restitution);
+                float vel = -(1 + restitution) * rel_velocity_along_normal;
+                vel /= 2.0f; // Both have same mass
+                sf::Vector2f vel_along_normal = normal * vel;
+
+                A->velocity += vel_along_normal;
+                B->velocity -= vel_along_normal;
+            }
         }
     }
 }
@@ -99,9 +139,9 @@ void Balls::update(const float &delta_time)
         {
             i->update(delta_time);
         }
-    }
 
-    // handle_Collision(delta_time);
+        handle_Collision();
+    }
 
     despawn_Balls();
 }

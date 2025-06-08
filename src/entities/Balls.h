@@ -10,7 +10,7 @@ private:
 
     void spawn_Ball();
     void despawn_Balls();
-    void handle_Collision(const float &delta_time);
+    void handle_Collision();
 
 public:
     Balls();
